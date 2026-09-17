@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """创建 24 条省级三网 TCP 延迟探测任务到 monitor-probe hub。
 
-用法: python3 setup_tasks.py --hub http://127.0.0.1:28081 --cookie /tmp/cookie.txt
+用法:
+  python3 setup_tasks.py --hub http://127.0.0.1:28081 --cookie <cookie> --nodes 1,2,3
+  python3 setup_tasks.py --hub http://127.0.0.1:28081 --cookie-file /tmp/cookie.txt --nodes 1,2,3
 """
-import json, urllib.request, urllib.error, sys, argparse
+import json, urllib.request, urllib.error, sys, argparse, os
 
 PROVINCES = [
     ("hb", "北京", "bj"),
@@ -38,14 +40,23 @@ def create_task(hub, cookie, name, target, nodes, interval=60):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--hub", default="http://127.0.0.1:28081")
-    parser.add_argument("--cookie", required=True, help="cookie 文件路径")
+    parser.add_argument("--cookie", default="", help="cookie 值 (monitor_session=xxx)")
+    parser.add_argument("--cookie-file", default="", help="从文件读取 cookie")
     parser.add_argument("--nodes", default="1,2,3", help="节点 ID 列表 (逗号分隔)")
     parser.add_argument("--interval", type=int, default=60, help="探测间隔 (秒)")
     parser.add_argument("--dry-run", action="store_true", help="仅打印不执行")
     args = parser.parse_args()
 
-    with open(args.cookie) as f:
-        cookie = f.read().strip()
+    cookie = args.cookie
+    if args.cookie_file:
+        with open(args.cookie_file) as f:
+            cookie = f.read().strip()
+    if not cookie:
+        # 尝试从环境变量读取
+        cookie = os.environ.get("MONITOR_COOKIE", "")
+    if not cookie:
+        print("错误: 请通过 --cookie、--cookie-file 或 MONITOR_COOKIE 环境变量提供 cookie")
+        sys.exit(1)
 
     nodes = [int(n) for n in args.nodes.split(",")]
     tasks = []
