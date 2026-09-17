@@ -21,6 +21,12 @@ curl -sL https://raw.githubusercontent.com/offzen/monitor-probe-colored-lantency
 ## 创建延迟任务
 
 ```bash
+curl -sL https://raw.githubusercontent.com/offzen/monitor-probe-colored-lantency-nodes/main/setup_tasks.py | python3 - --hub http://<hub>:28080 --cookie "<cookie>" --nodes 1,2,3
+```
+
+或从文件读取 cookie:
+
+```bash
 curl -sL https://raw.githubusercontent.com/offzen/monitor-probe-colored-lantency-nodes/main/setup_tasks.py | python3 - --hub http://<hub>:28080 --cookie-file /tmp/cookie.txt --nodes 1,2,3
 ```
 
