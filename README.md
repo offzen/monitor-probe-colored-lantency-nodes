@@ -7,7 +7,7 @@
 | 路径 | 用途 |
 |---|---|
 | `monitor-theme-multicolor/` | 彩色延迟主题 (5 色实线 + 9 档时间范围) |
-| `setup_tasks.py` | 创建 24 条延迟探测任务 (直接 SQLite，无需登录) |
+| `setup_tasks.py` | 创建 24 条延迟探测任务 (直接 SQLite，交互式选节点) |
 | `setup_tasks_api.py` | API 版本 (需要 hub 地址，自动登录) |
 
 ## 安装主题
@@ -23,6 +23,14 @@ curl -sL https://raw.githubusercontent.com/offzen/monitor-probe-colored-lantency
 
 ```bash
 curl -sL https://raw.githubusercontent.com/offzen/monitor-probe-colored-lantency-nodes/main/setup_tasks.py | python3 - /opt/monitor/data/monitor.db 1,2,3
+```
+
+**三种选择节点方式**：
+
+```bash
+python3 setup_tasks.py monitor.db           # 交互式选择 (显示节点列表)
+python3 setup_tasks.py monitor.db 1,2,3     # 直接指定节点 ID
+python3 setup_tasks.py monitor.db --all     # 选择所有节点
 ```
 
 24 条任务：8 省 × 3 运营商，每条 60 秒间隔，目标 `<区域>-<运营商>-v4.ip.zstaticcdn.com:80`。
