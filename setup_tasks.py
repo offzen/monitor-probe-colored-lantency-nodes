@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""直接通过 SQLite 创建 24 条延迟任务，无需登录 hub。
+"""创建 24 条省级三网 TCP 延迟探测任务到 monitor-probe hub。
 
-用法: python3 setup_tasks_sql.py <monitor.db> [node_ids]
-示例: python3 setup_tasks_sql.py /opt/monitor/data/monitor.db 1,2,3
+用法:
+  python3 setup_tasks.py <monitor.db>           # 交互式选择节点
+  python3 setup_tasks.py <monitor.db> 1,2,3     # 直接指定节点
+  python3 setup_tasks.py <monitor.db> --all     # 所有节点
 """
 import sqlite3, sys
 
@@ -19,25 +21,17 @@ PROVINCES = [
 
 ISPS = [("cm", "cm"), ("ct", "ct"), ("cu", "cu")]
 
-def main():
-    if len(sys.argv) < 2:
-        print("用法: python3 setup_tasks_sql.py <monitor.db> [node_ids]")
-        sys.exit(1)
+def list_nodes(db_path):
+    """列出所有可用节点"""
+    conn = sqlite3.connect(db_path)
+    nodes = conn.execute("SELECT id, name, hostname FROM node ORDER BY id").fetchall()
+    conn.close()
+    return nodes
 
-    db_path = sys.argv[1]
-    node_ids = [int(n) for n in sys.argv[2].split(",")] if len(sys.argv) > 2 else [1, 2, 3]
-
+def create_tasks(db_path, node_ids):
+    """创建任务"""
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA journal_mode=WAL")
-
-    # 获取 ping_node 表中每个 task_id 对应的 node_id
-    # 如果 ping_node 表中没有记录，则使用用户提供的 node_ids
-    existing = conn.execute("SELECT task_id, node_id FROM ping_node").fetchall()
-    task_nodes = {}
-    for task_id, node_id in existing:
-        if task_id not in task_nodes:
-            task_nodes[task_id] = []
-        task_nodes[task_id].append(node_id)
 
     created = 0
     skipped = 0
@@ -46,36 +40,69 @@ def main():
             name = f"{region}-{province}-{isp_suffix}"
             target = f"{prefix}-{isp_suffix}-v4.ip.zstaticcdn.com:80"
 
-            # 检查是否已存在
-            existing_task = conn.execute(
-                "SELECT id FROM ping_task WHERE name = ?", (name,)
-            ).fetchone()
-
-            if existing_task:
+            existing = conn.execute("SELECT id FROM ping_task WHERE name = ?", (name,)).fetchone()
+            if existing:
                 skipped += 1
                 continue
 
-            # 插入任务
             conn.execute(
                 "INSERT INTO ping_task (name, target, interval) VALUES (?, ?, 60)",
                 (name, target)
             )
             task_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
-            # 插入 ping_node 关联
             for node_id in node_ids:
                 conn.execute(
                     "INSERT INTO ping_node (task_id, node_id) VALUES (?, ?)",
                     (task_id, node_id)
                 )
-
             created += 1
-            print(f"  ✓ {name} → {target} (nodes={node_ids})")
+            print(f"  ✓ {name} → {target}")
 
     conn.commit()
     conn.close()
-
     print(f"\n完成: 新建 {created} 条, 跳过 {skipped} 条已存在")
+
+def main():
+    if len(sys.argv) < 2:
+        print("用法: python3 setup_tasks.py <monitor.db> [节点ID]")
+        print("示例: python3 setup_tasks.py /opt/monitor/data/monitor.db 1,2,3")
+        print("      python3 setup_tasks.py /opt/monitor/data/monitor.db --all")
+        sys.exit(1)
+
+    db_path = sys.argv[1]
+    nodes = list_nodes(db_path)
+
+    if not nodes:
+        print("错误: 没有可用节点")
+        sys.exit(1)
+
+    print("可用节点:")
+    for nid, name, hostname in nodes:
+        print(f"  {nid}. {name} ({hostname})")
+    print()
+
+    # 解析节点参数
+    if len(sys.argv) >= 3:
+        arg = sys.argv[2]
+        if arg == "--all":
+            node_ids = [n[0] for n in nodes]
+        else:
+            node_ids = [int(n) for n in arg.split(",")]
+    else:
+        # 交互式选择
+        try:
+            raw = input("选择节点 (逗号分隔, 或输入 all 选择全部): ").strip()
+            if raw.lower() == "all":
+                node_ids = [n[0] for n in nodes]
+            else:
+                node_ids = [int(n) for n in raw.split(",")]
+        except (EOFError, KeyboardInterrupt):
+            print("\n已取消")
+            sys.exit(0)
+
+    print(f"\n已选节点: {node_ids}")
+    create_tasks(db_path, node_ids)
 
 if __name__ == "__main__":
     main()
