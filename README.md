@@ -11,26 +11,17 @@
 
 ## 安装主题
 
-把 `monitor-theme-multicolor/` 目录放到 hub 的主题目录：
-
 ```bash
-# hub 主题路径: <themes_dir>/<theme_name>/
-# 默认 themes 目录与 monitor.db 同级
-cp -r monitor-theme-multicolor /opt/monitor/data/themes/
-
-# 在面板中切换主题: 外观 → 主题 → multicolor
-# 或通过 API:
-#   PUT /api/settings {"theme": "multicolor"}
+mkdir -p /opt/monitor/data/themes/multicolor
+curl -sL https://raw.githubusercontent.com/offzen/monitor-probe-colored-lantency-nodes/main/monitor-theme-multicolor.tar.gz | tar xz -C /opt/monitor/data/themes/multicolor/
 ```
+
+然后在面板中切换主题: 外观 → 主题 → multicolor
 
 ## 创建延迟任务
 
 ```bash
-python3 setup_tasks.py --hub http://<hub>:28080 --nodes 1,2,3
-# 需要先登录获取 cookie:
-# curl -c /tmp/cookie.txt -X POST http://<hub>:28080/api/auth/login \
-#   -H "Content-Type: application/json" \
-#   -d '{"username":"admin","password":"<password>"}'
+curl -sL https://raw.githubusercontent.com/offzen/monitor-probe-colored-lantency-nodes/main/setup_tasks.py | python3 - --hub http://<hub>:28080 --cookie-file /tmp/cookie.txt --nodes 1,2,3
 ```
 
 24 条任务：8 省 × 3 运营商，每条 60 秒间隔，目标 `<区域>-<运营商>-v4.ip.zstaticcdn.com:80`。
