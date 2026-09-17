@@ -1,0 +1,8 @@
+{
+  "name": "默认主题",
+  "short": "multicolor",
+  "description": "内置状态面板，彩色延迟配色 (multi-color latency)",
+  "version": "1.0.1-color",
+  "author": "stqfdyr",
+  "url": "https://github.com/monitor-probe/monitor-theme-default"
+}
